@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>입지분석</title>
+</head>
+<body>
+
+<div id="map" style="width:100%;height:100vh;"></div>
+
+<p>
+    <input type="checkbox" id="chkUseDistrict" onchange="setOverlayMapTypeId()" /> 지적편집도 정보 보기
+    <input type="checkbox" id="chkTerrain" onchange="setOverlayMapTypeId()" /> 지형정보 보기 
+</p>
+
+<script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=b0e08f4ae7959b49faa1e188252ea1aa&libraries=services"></script>
+<script>
+
+var category1 = ["SC4", "SW8"]; // 학교, 지하철 카테고리
+var category2 = ["MT1", "CT1", "HP8", "PO3"]; // 상업, 문화, 병원, 공공 카테고리
+
+var mapContainer = document.getElementById('map'); // 지도를 표시할 div 
+var mapOption = {
+    center: new kakao.maps.LatLng(33.450701, 126.570667), // 지도의 중심좌표
+    level: 3 // 지도의 확대 레벨
+};
+
+// 지도를 생성합니다    
+var map = new kakao.maps.Map(mapContainer, mapOption); 
+
+var mapTypes = {
+    terrain: kakao.maps.MapTypeId.TERRAIN,
+    useDistrict: kakao.maps.MapTypeId.USE_DISTRICT
+};
+
+function setOverlayMapTypeId() {
+    var chkTerrain = document.getElementById('chkTerrain');
+    var chkUseDistrict = document.getElementById('chkUseDistrict');
+
+    for (var type in mapTypes) {
+        if (mapTypes.hasOwnProperty(type)) {
+            map.removeOverlayMapTypeId(mapTypes[type]);
+        }
+    }
+
+    if (chkUseDistrict.checked) {
+        map.addOverlayMapTypeId(mapTypes.useDistrict);
+    }
+
+    if (chkTerrain.checked) {
+        map.addOverlayMapTypeId(mapTypes.terrain);
+    }
+}
+
+var geocoder = new kakao.maps.services.Geocoder();
+
+function ajm() {
+    var r1 = document.getElementById("a1").value;
+    var r2 = document.getElementById("a2").value;
+    var juso = document.getElementById("a3").value;
+
+    geocoder.addressSearch(juso, function(result, status) {
+        if (status === kakao.maps.services.Status.OK) {
+            var coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+
+            var marker0 = new kakao.maps.Marker({
+                map: map,
+                position: coords
+            });
+
+            var infowindow = new kakao.maps.InfoWindow({
+                content: '<div style="width:150px;text-align:center;padding:6px 0;">사업지</div>'
+            });
+            infowindow.open(map, marker0);
+
+            map.setCenter(coords);
+
+            var marker1 = new daum.maps.Marker({
+                position: coords,
+                title: "마커1",
+                map: map
+            });
+
+            var circle2 = new daum.maps.Circle({
+                map: map,
+                center: coords,
+                radius: r2,
+                strokeWeight: 2,
+                strokeColor: '#FF00FF',
+                strokeOpacity: 0.8,
+                strokeStyle: 'dashed',
+                fillColor: '#D3D5BF',
+                fillOpacity: 0.5
+            });
+
+            var circle1 = new daum.maps.Circle({
+                map: map,
+                center: coords,
+                radius: r1,
+                strokeWeight: 2,
+                strokeColor: '#FF00FF',
+                strokeOpacity: 0.8,
+                strokeStyle: 'dashed',
+                fillColor: '#D3D5BF',
+                fillOpacity: 0.5
+            });
+
+            for (var i = 0; i < category1.length; i++) {
+                searchPlaces(category1[i], r1, coords);
+            }
+
+            for (var j = 0; j < category2.length; j++) {
+                searchPlaces(category2[j], r2, coords);
+            }
+        }
+    });
+}
+
+function searchPlaces(category, radius, coords) {
+    var ps = new kakao.maps.services.Places(map);
+    ps.categorySearch(category, function(data, status, pagination) {
+        if (status === kakao.maps.services.Status.OK) {
+            for (var i = 0; i < data.length; i++) {
+                displayMarker(data[i]);
+            }
+        }
+    }, {
+        radius: radius,
+        location: coords
+    });
+}
+
+function displayMarker(place) {
+    var marker = new kakao.maps.Marker({
+        map: map,
+        position: new kakao.maps.LatLng(place.y, place.x)
+    });
+
+    kakao.maps.event.addListener(marker, 'click', function() {
+        infowindow.setContent('<div style="padding:5px;font-size:12px;">' + place.place_name + '</div>');
+        infowindow.open(map, marker);
+    });
+}
+
+</script>
+<label for="a1">주거 반경(m): </label>
+<input type="text" id="a1" value="2000">
+
+<label for="a2">교육 반경(m): </label>
+<input type="text" id="a2" value="300">
+
+<label for="a3">도로명 주소: </label>
+<input type="text" id="a3">
+
+<button type="button" class="btn btn-success" onclick="ajm();">검색</button>
+
+</body>
+</html>
